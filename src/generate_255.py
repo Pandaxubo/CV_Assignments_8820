@@ -19,8 +19,8 @@ with open(filename, 'rb') as f:
 # img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) 
 # applying different thresholding 
 # techniques on the input image 
-# all pixels value above 120 will 
+# all pixels value above 128 will 
 # be set to 255 
-ret, thresh1 = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY) 
+ret, thresh1 = cv2.threshold(img, 128, 0, cv2.THRESH_BINARY) 
 #cv2.imshow('Binary Threshold', thresh1) 
 cv2.imwrite('test_data/thresd1.jpg', thresh1)
