@@ -27,12 +27,14 @@ with open(output , 'rb') as out_file1:
 i = 0
 myArrNew = myArr
 for value in myArr :
-    if(value <= 128 ) :
-        myArrNew[i] = 2
-    else:
+    if(value > 128 ) :
         myArrNew[i] = 0
+    else:
+        myArrNew[i] = 255
     i = i + 1
-
+    
+print(512*512)
+print(i)
 with open(output1, 'wb') as out_file:
     out_file.write(myArrNew)
 
@@ -43,25 +45,25 @@ BTimage = BTimage.reshape([512, 512])
 # cv2.destroyAllWindows()
 
 def CCL(BTimage, sizeFilterValue): 
-    labels = []
-    stats = []
-    centroids = []
-    connectivity = 0
-    ltype = 0
-    ccltype = 0 
-    print(cv2.connectedComponentsWithStats(BTimage, labels, stats, centroids, connectivity, CCL_WU ))
+    # labels = []
+    # stats = []
+    # centroids = []
+    # connectivity = 0
+    # ltype = 0
+    # ccltype = 0 
+    retval, labels, stats, centroids = cv2.connectedComponentsWithStats(BTimage, 8)
+    print("retval  = ")
+    print(retval)
 
+    print("labels  = ")
+    print(labels)
 
+    print("stats  = ")
+    print(stats)
 
-# int cv::connectedComponentsWithStats	(	InputArray 	image,
-# OutputArray 	labels,
-# OutputArray 	stats,
-# OutputArray 	centroids,
-# int 	connectivity,
-# int 	ltype,
-# int 	ccltype 
-# )	
-
+    print("centroids  = ")
+    print(centroids)
+    cv2.imwrite("image4test/labels.png",np.array(labels))
 
 
 CCL(BTimage,7000)
