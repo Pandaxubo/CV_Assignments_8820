@@ -147,4 +147,4 @@ def IterCCL(image, FilterValue):
         componentCount = componentCount + 1 
 
 ### run the algorithm, the value means the range of components(min area)
-IterCCL("Data/comb.img", 6000)
+IterCCL("Data/comb.img", 6000) 
