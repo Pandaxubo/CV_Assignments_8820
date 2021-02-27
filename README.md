@@ -1,2 +1,3 @@
 # CCL_Algorithm_CV
-An incomplete implementation to CSCI 8820 Assignment1. The requirements is in the pdf file. I only implement three of them.
+Implementation to CSCI 8820 Assignments. The requirements is in the pdf file. 
+For assignment 1, I only implement three of them.
