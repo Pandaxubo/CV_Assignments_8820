@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import math
 
 ### starts the algorithm
-def IterCCL(image, FilterValue):
+def Assignment1(image, FilterValue):
 
     ### set width and height 
     w, h = 512, 512
@@ -27,9 +27,11 @@ def IterCCL(image, FilterValue):
     matrix = np.zeros((height,width))
 
     ### plot the threshold image(Bt) 
-    plt.imshow(thresh1)
+    plt.imshow(thresh1,'gray')
     plt.show()
 
+
+    plt.show()
     ###algorithm implementation
     label = 1 ### label start from 1
     mergeDic = {} ### contains pairs that need to be merged
@@ -147,4 +149,4 @@ def IterCCL(image, FilterValue):
         componentCount = componentCount + 1 
 
 ### run the algorithm, the value means the range of components(min area)
-IterCCL("Data/comb.img", 6000) 
+Assignment1("Data/comb.img", 6000) 
