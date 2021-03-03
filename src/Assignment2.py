@@ -8,7 +8,7 @@ from collections import OrderedDict
 filename = 'input-images/comb.img'
 output = 'input-images/outputCV.img'
 output1 = 'input-images/BTimg.img'
-
+##air
 with open(filename , 'rb') as in_file:
     with open(output, 'wb') as out_file:
         out_file.write(in_file.read()[512:])
