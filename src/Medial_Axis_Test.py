@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import math
 from collections import OrderedDict
-import scipy.spatial.distance
+import cv2 as cv
 
 #build Distance Transfrom for generation of Medial Axis#
 #Assignment 2#
@@ -58,27 +58,6 @@ def _get_four_neighbors(x, y):
                 int(BTimage[x + 1][y]), int(BTimage[x][y - 1])]
 
 
-def _calculate_distance_transform(BTimage):
-    _modify_image_to_zero_one(BTimage)
-    counter = 0
-    while True:
-        try:
-            BTimageold = BTimage
-            tempImage1 = np.copy(BTimageold)
-            counter = counter + 1
-            for x in range(0,512,1):
-                for y in range(0,512,1):
-                    if BTimage[x][y] != 0 and _is_not_border(x, y):
-                            fourNeighbor = _get_four_neighbors(x, y)
-                            BTimage[x][y] = 1 + min(fourNeighbor)
-
-            if np.array_equal(tempImage1,BTimage): #   tempImage1 is same as previous BTimage:
-                break
-        except:
-            if np.array_equal(tempImage1, BTimage):
-                break
-
-
 # def _calculate_distance_transform(BTimage):
 #     _modify_image_to_zero_one(BTimage)
 #     counter = 0
@@ -87,16 +66,33 @@ def _calculate_distance_transform(BTimage):
 #             BTimageold = BTimage
 #             tempImage1 = np.copy(BTimageold)
 #             counter = counter + 1
-#             BTimage = scipy.spatial.distance.pdist(BTimage,'cityblock')
+#             for x in range(0,512,1):
+#                 for y in range(0,512,1):
+#                     if BTimage[x][y] != 0 and _is_not_border(x, y):
+#                             fourNeighbor = _get_four_neighbors(x, y)
+#                             BTimage[x][y] = 1 + min(fourNeighbor)
+
 #             if np.array_equal(tempImage1,BTimage): #   tempImage1 is same as previous BTimage:
 #                 break
 #         except:
 #             if np.array_equal(tempImage1, BTimage):
 #                 break
+#     print("BTimage is: ")
+#     plt.imshow(BTimage,cmap='gray')
+#     plt.show()
+
+
+def _calculate_distance_transform(BTimage):
+    _modify_image_to_zero_one(BTimage)
+    BTimage = cv.distanceTransform(BTimage, cv.DIST_L2, 3)
+    print("BTimage is: ")
+    plt.imshow(BTimage,cmap='gray')
+    plt.show()
 
     # generate medial axis
 def generateMedialAxis(BTimage):
     tempImage = BTimage
+    
     tempImageNew = np.copy(tempImage)
     medialAxisArray = np.copy(tempImage)
     for x in range(0,512,1):
