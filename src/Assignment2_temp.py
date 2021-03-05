@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import math
-from collections import OrderedDict
 import cv2 as cv
 
 class Assignment2:
@@ -66,7 +65,7 @@ class Assignment2:
     ### generate skeleton
     def _get_skeleton(self):
         self._modify_image_to_zero_one()
-        
+
         ### iterative calculate distance transform until we have correct image
         formerBt = self.Bt
         tempImage = np.copy(formerBt)
