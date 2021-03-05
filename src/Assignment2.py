@@ -70,6 +70,7 @@ def buildDistanceTransfrom(BTimage):
     # generate medial axis
 def generateMedialAxis(BTimage):
     tempImage = BTimage
+    print(BTimage)
     tempImageNew = np.copy(tempImage)
     medialAxisArray = np.copy(tempImage)
     for x in range(0,512,1):
