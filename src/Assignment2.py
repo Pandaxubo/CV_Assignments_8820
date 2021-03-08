@@ -1,215 +1,140 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import math
-from collections import OrderedDict
+import cv2 as cv
 
-#build Distance Transfrom for generation of Medial Axis#
-#Assignment 2#
-filename = 'input-images/comb.img'
-output = 'input-images/outputCV.img'
-output1 = 'input-images/BTimg.img'
-##air
-with open(filename , 'rb') as in_file:
-    with open(output, 'wb') as out_file:
-        out_file.write(in_file.read()[512:])
+class Assignment2:
 
-fo = open(output, 'rb')
-
-Output512 = np.fromfile(output, dtype='uint8', sep="")
-Output512 = Output512.reshape([512, 512])
-
-with open(output , 'rb') as out_file1:
-    myArr = bytearray(out_file1.read())
+    def __init__(self, image_path):
+        self.image_path = image_path    ### init image path 
 
 
-# Threshold the image for the value T = 128 to generate the binary image Bt
-i = 0
-myArrNew = myArr
-for value in myArr :
-    if(value <= 128 ) :
-        myArrNew[i] = 2 #border
-    else:
-        myArrNew[i] = 0 #component
-    i = i + 1
+    ### preprocessing oringinal image
+    def _get_binary_image(self):
+        with open(self.image_path, 'rb') as f: 
+            f.seek(512) ### throw the first 512 pixels
+            img = np.fromfile(f, dtype=np.uint8).reshape((512,512)) ###reshape image
 
-with open(output1, 'wb') as out_file:
-    out_file.write(myArrNew)
+        ### plot the original image B 
+        print("B is:")
+        plt.imshow(img)
+        plt.show()
 
-BTimage = np.fromfile(output1, dtype='uint8', sep="")
-BTimage = BTimage.reshape([512, 512])
+        ### threshold image followed by instruction
+        ### Threshold the image for the value T = 128 to generate the binary image Bt
+        for i in range(len(img)):
+            for j in range(len(img[0])):
+                if(img[i][j] <= 128 ) :
+                    img[i][j] = 255
+                else:
+                    img[i][j] = 0 
 
+        ### plot the threshold image Bt
+        print("Bt is:") 
+        plt.imshow(img,'gray')
+        plt.show()
+        self.Bt = img
 
-def buildDistanceTransfrom(BTimage):
-    #set all values of pixels to 1 which are not 0
-    for x in range(0,512,1):
-        for y in range(0,512,1):
-            if BTimage[x][y] != 0:
-                BTimage[x][y] = 1
+    ### setting all values of pixels to 1 which are not 0, in order to calculate distance transform
+    def _modify_image_to_zero_one(self):    
+        for x in range(0,512,1):
+            for y in range(0,512,1):
+                if self.Bt[x][y] != 0:
+                    self.Bt[x][y] = 1
 
-    counter = 0
-    while True:
-        try:
-            BTimageold = BTimage
-            tempImage1 = np.copy(BTimageold)
-            counter = counter + 1
-            for x in range(0,512,1):
-                for y in range(0,512,1):
-                    if BTimage[x][y] != 0:
-                        if x - 1 >= 0 and y - 1 >= 0 and x + 1 < 512 and y + 1 < 512:
-                            fourNeighbor = [int(BTimage[x][y]), int(BTimage[x - 1][y]), int(BTimage[x][y + 1]),
-                                            int(BTimage[x + 1][y]), int(BTimage[x][y - 1])]
-                            BTimage[x][y] = 1 + min(fourNeighbor)
+    ### abandon boundary pixels
+    def _is_not_boundary(self, x, y):
+        if x > 0 and y > 0 and x < 511 and y < 511:
+            return True
+        else:
+            return False
 
-            if np.array_equal(tempImage1,BTimage): #   tempImage1 is same as previous BTimage:
-                break
-        except:
-            if np.array_equal(tempImage1, BTimage):
-                break
+    ### get four connected neighbors for distance transform
+    def _get_four_neighbors(self, x, y):
+        return [int(self.Bt[x][y]), int(self.Bt[x - 1][y]), int(self.Bt[x][y + 1]),
+                                                int(self.Bt[x + 1][y]), int(self.Bt[x][y - 1])]
 
-
-    # generate medial axis
-def generateMedialAxis(BTimage):
-    tempImage = BTimage
-    print(BTimage)
-    tempImageNew = np.copy(tempImage)
-    medialAxisArray = np.copy(tempImage)
-    for x in range(0,512,1):
-        for y in range(0,512,1):
-            tempImageNew[x][y] = 0
-            medialAxisArray[x][y] = 0
-
-    for x in range(0,512,1):
-        for y in range(0,512,1):
-
-            if tempImage[x][y] != 0 :
-                if x - 1 >= 0 and y - 1 >= 0 and x + 1 < 512 and y + 1 < 512:
+    ### calcualte distance transform
+    def _calculate_distance_transform(self):
+        for x in range(512):
+            for y in range(512):
+                if self.Bt[x][y] != 0 and self._is_not_boundary(x, y):
+                    self.Bt[x][y] = 1 + min(self._get_four_neighbors(x, y)) ### textbook chapter 2 (2.41, 2.42)
 
 
-                    localmaxima = max(int(BTimage[x][y]),int(BTimage[x-1][y]),int(BTimage[x][y+1]),int(BTimage[x+1][y]),int(BTimage[x][y-1]))
+    ### generate skeleton
+    def _get_skeleton(self):
+        self._modify_image_to_zero_one()
 
-                    if int(BTimage[x][y]) >= localmaxima:
-                        tempImageNew[x][y] = 255
-                        medialAxisArray[x][y] = BTimage[x][y]
+        ### iterative calculate distance transform until we have correct image
+        formerBt = self.Bt
+        tempImage = np.copy(formerBt)
+        self._calculate_distance_transform()
+        while not np.array_equal(tempImage,self.Bt):
+            formerBt = self.Bt
+            tempImage = np.copy(formerBt)
+            self._calculate_distance_transform()    
 
-    for x in range(0,512,1):
-        for y in range(0,512,1):
-            if BTimage[x][y] != 0 :
-                BTimage[x][y] = 255
-    plt.imshow(tempImageNew,cmap='gray')
-    plt.show()
+        print("Bt is: ")
+        plt.imshow(self.Bt,cmap='gray')
+        plt.show()
 
-    return medialAxisArray
+        ### generating skeleton
+        skeleton = np.zeros((512, 512), dtype= np.uint8)
 
+        for x in range(512):
+            for y in range(512):
+                if self.Bt[x][y] != 0 and self._is_not_boundary(x, y):
+                    localmaxima = max(self._get_four_neighbors(x, y))
+                    if int(self.Bt[x][y]) >= localmaxima:
+                        skeleton[x][y] = self.Bt[x][y]
+        print("M is: ")
+        plt.imshow(skeleton,cmap='gray')
+        plt.show()
 
+        self.skeleton = skeleton
+        return 
 
-buildDistanceTransfrom(BTimage)
+    ### update tempImg pixel value to reshape it 
+    def _update_four_neighbors(self, x, y, newValue):
+        self.tempImg[x - 1][y] = newValue if newValue >= self.tempImg[x - 1][y] else self.tempImg[x - 1][y]
+        self.tempImg[x + 1][y] = newValue if newValue >= self.tempImg[x + 1][y] else self.tempImg[x + 1][y]
+        self.tempImg[x][y - 1] = newValue if newValue >= self.tempImg[x][y - 1] else self.tempImg[x][y - 1]
+        self.tempImg[x][y + 1] = newValue if newValue >= self.tempImg[x][y + 1] else self.tempImg[x][y + 1]
 
+    ### rebuild skeleton to binary image                                
+    def _rebuild_image(self):
+        tempImg = np.copy(self.skeleton)
+        self.tempImg = tempImg
 
-medialAxisArr = generateMedialAxis(BTimage)
+        ### maxElement is the maximum iterate times
+        maxElement = 0
+        for x in range(0,512,1):
+            for y in range(0,512,1):
+                if tempImg[x][y] > maxElement :
+                    maxElement = tempImg[x][y]
+        
+        ### update value
+        for n in range(maxElement):
+            for i in range(512):
+                for j in range(512):
+                    if self.tempImg[i][j] != 0 and self._is_not_boundary(i, j):
+                        tempValue = self.tempImg[i][j] - 1
+                        if tempValue >= 0: 
+                            self._update_four_neighbors(i, j, tempValue)
 
-def reconstructImageNew(medialAxisArr):
-    # do post processing on the medial Axis Array
+        ### get binary image
+        for x in range(0,512,1):
+            for y in range(0,512,1):
+                if tempImg[x][y] != 0 :
+                    tempImg[x][y] = 255
 
-    ravelMedialArr = set(medialAxisArr.ravel())
+        print("Final image is:")
+        plt.imshow(tempImg, cmap='gray')
+        plt.show()
 
-    valueList = list(ravelMedialArr)  # contains all the unique lables in medial arr
-    valueList.remove(0)
-
-    tempArr = np.copy(medialAxisArr)    #copy the medial axis array to temperory array for processing
-
-
-    while True:
-        maximum = max(valueList)    # select maximum from the pixel set
-
-        for x in range(0, 512, 1):
-            for y in range(0, 512, 1):
-                if tempArr[x][y] == maximum:
-
-                    # extend left
-                    i = x
-                    j = y
-                    leftdistance = int(tempArr[x][y])
-                    tempArr[i][j] = tempArr[x][y]
-                    while True:
-                        j = j - 1
-                        leftdistance = leftdistance - 1
-
-                        if leftdistance <= 0 or j < 0:
-                            break
-
-                        if j >= 0:
-                            if tempArr[i][j] < tempArr[i][j + 1]  :
-                                tempArr[i][j] = tempArr[i][j + 1] - 1
-                            else:
-                                break
-
-                    # extend right
-                    i = x
-                    j = y
-                    rightdistance = int(tempArr[x][y])
-                    tempArr[i][j] = tempArr[x][y]
-                    while True:
-                        j = j + 1
-                        rightdistance = rightdistance - 1
-
-                        if rightdistance <= 0 or j > 511:
-                            break
-
-                        if j <= 511:
-                            if tempArr[i][j] < tempArr[i][j - 1] :
-                                tempArr[i][j] = tempArr[i][j - 1] - 1
-                            else:
-                                break
-                    # extend up
-                    i = x
-                    j = y
-                    updistance = int(tempArr[x][y])
-                    tempArr[i][j] = tempArr[x][y]
-                    while True:
-                        i = i - 1
-
-                        updistance = updistance - 1
-
-                        if updistance <= 0 or i < 0:
-                            break
-
-                        if i >= 0:
-                            if tempArr[i][j] < tempArr[i + 1][j] :
-                                tempArr[i][j] = tempArr[i + 1][j] - 1
-                            else:
-                                break
-                    #extend down
-                    i = x
-                    j = y
-                    downdistance = int(tempArr[x][y])
-                    tempArr[i][j] = tempArr[x][y]
-                    while True:
-                        i = i + 1
-
-                        downdistance = downdistance - 1
-
-                        if downdistance <= 0 or i > 511:
-                            break
-
-                        if i <= 511:
-                            if tempArr[i][j] < tempArr[i - 1][j]:
-                                tempArr[i][j] = tempArr[i - 1][j] - 1
-                            else:
-                                break
-
-        valueList.remove(maximum)       # delete one the maximum pixel value data is processed for the iteration
-
-        if len(valueList) == 0:
-            break
-
-    # create binary image for display
-    for x in range(0,512,1):
-        for y in range(0,512,1):
-            if tempArr[x][y] != 0 :
-                tempArr[x][y] = 255
-
-    plt.imshow(tempArr, cmap='gray')
-    plt.show()
-
-
-reconstructImageNew(medialAxisArr)
+### run the class
+result = Assignment2("Data/comb.img")
+result._get_binary_image()
+result._get_skeleton()
+result._rebuild_image()
