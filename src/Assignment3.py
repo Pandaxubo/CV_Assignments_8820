@@ -70,13 +70,13 @@ class Assignment3:
             i += 1
 
         ### get highest peakiness from list above
-        peakiness_threshold = max(peakiness)
+        T = max(peakiness)
 
-        peakinessed_image = self._threshold_image(peakiness_threshold)
+        ### display image
+        peakinessed_image = self._threshold_image(T)
         print("After peakiness:")
-        plt.imshow(peakinessed_image)
+        plt.imshow(peakinessed_image, cmap='gray')
         plt.show()
-
 
     ### select neighbor for each peak for constructing gi_gj(For peakiness thresholding)
     def _select_neighbor(self, peaks, i):
@@ -91,11 +91,55 @@ class Assignment3:
 
     ########################################################################
     ### 2. Iterative thresholding
+    def _iterative_thresholding(self):
 
+        ### initial estimate of T is the average of intensity values in B 
+        estimate_T = math.ceil(np.mean(self.B))
+        
+        ### initialize a copy of B  
+        temp_B = np.copy(self.B)
+
+        ### calculate threshold. iter_list[0, 1, 2] respond to u1, u2 and new_T for each iteration
+        iter_list = self._iter_T(temp_B, estimate_T)
+        former_u1 = 0
+        former_u2 = 0
+        while former_u1 != iter_list[0] and former_u2 != iter_list[1]:  
+            former_u1 = iter_list[0]
+            former_u2 = iter_list[1]
+            iter_list = self._iter_T(temp_B, iter_list[2])
+        
+        ### get T in final iteration
+        T = round(iter_list[2])
+
+        ### display image
+        thresholded_image = self._threshold_image(T)
+        print("After iterative thresholding:")
+        plt.imshow(thresholded_image, cmap='gray')
+        plt.show()
+        
+    ### do iterations to find final T (For iterative thresholding)
+    def _iter_T(self, temp_B, current_T):
+
+        ### initialize R1, R2 to store split area
+        R1 = []
+        R2 = []
+        for x in range(self.w):
+            for y in range(self.h):
+                if temp_B[x][y] < current_T:
+                    R1.append(temp_B[x][y])
+                else:
+                    R2.append(temp_B[x][y])
+
+        ### get u1, u2 responding to R1 and R2
+        u1 = math.ceil(np.mean(R1))
+        u2 = math.ceil(np.mean(R2))
+        new_T = (u1 + u2) / 2
+
+        return [u1, u2, new_T]
 
 
 result = Assignment3("Data/test1.img")
 result._get_original_image()
 result._peakiness_detection()
-
+result._iterative_thresholding()
 
