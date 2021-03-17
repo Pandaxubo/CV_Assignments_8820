@@ -77,6 +77,7 @@ class Assignment3:
         plt.imshow(peakinessed_image)
         plt.show()
 
+
     ### select neighbor for each peak for constructing gi_gj(For peakiness thresholding)
     def _select_neighbor(self, peaks, i):
         return peaks[i - 1] if abs(peaks[i - 1] - peaks[i]) > abs(peaks[i + 1] - peaks[i]) else peaks[i + 1]
