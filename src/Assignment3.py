@@ -51,8 +51,11 @@ class Assignment3:
         ### generate histogram
         histogram = np.round(np.transpose(cv.calcHist([img], [0], None, [256], [0,256]))).astype(int)[0].tolist()
 
+        plt.plot(histogram) 
+        plt.show()
+        
         ### store final peakiness
-        peakiness_threshold = 0
+        T = 0
 
         ### evaluation criterion to select peaks(easily to calculate peakiness)
         peaks = []
@@ -63,7 +66,7 @@ class Assignment3:
         ### find gi and gj(Duplicate tuples exist, like (a, b) and (b, a), but it will not affect result)
         gi_gj = {}     ### store gi and gj
         for i in range(1, len(peaks)-1, 1):
-            gi_gj[histogram.index(peaks[i])]= histogram.index(self._select_neighbor(peaks, i))
+            gi_gj[histogram.index(peaks[i])]= histogram.index(self._select_neighbor(peaks, histogram, i))
         gi_gj[histogram.index(peaks[len(peaks) - 1])] = histogram.index(peaks[len(peaks) - 2])
 
         ### find gk for each(gi, gj)
@@ -85,9 +88,9 @@ class Assignment3:
         self._display_image("Peakiness Detection", T, img, True)
 
     ### select neighbor for each peak for constructing gi_gj(For peakiness thresholding)
-    def _select_neighbor(self, peaks, i):
-        
-        return peaks[i - 1] if abs(peaks[i - 1] - peaks[i]) > abs(peaks[i + 1] - peaks[i]) else peaks[i + 1]
+    def _select_neighbor(self, peaks, histogram, i):
+
+        return peaks[i + 1] if abs(histogram.index(peaks[i - 1]) - histogram.index(peaks[i])) > abs(histogram.index(peaks[i + 1]) - histogram.index(peaks[i])) else peaks[i - 1]
 
     ### find lowest point between gi and gj(For peakiness thresholding)
     def _find_lowest_point(self, gi, gj, histogram):
@@ -222,10 +225,65 @@ class Assignment3:
         
         return target_image
 
+    ########################################################################
+    ### 4. Dual thresholding with region growing
+    def _dual_thresholding(self, img):
 
-result = Assignment3("Data/test1.img")
-img = result._get_original_image()
-result._peakiness_detection(img)
-result._iterative_thresholding(img, True)
-result._adaptive_thresholding(img)
+        ### initial estimate of T1 and T2. Here I choose the average and 75% intensity as T1 and T2.
+        T1 = math.ceil(np.mean(img))
+        T2 = np.percentile(img, 75)
+
+        ### initialize R1, R2, R3 to store split area
+        R1 = np.zeros((self.full_w, self.full_h), dtype='uint8')
+        R2 = np.zeros((self.full_w, self.full_h), dtype='uint8')
+        R3 = np.zeros((self.full_w, self.full_h), dtype='uint8')
+
+        ### value 3 regions with T1 and T2
+        for x in range(img.shape[0]):
+            for y in range(img.shape[1]):
+                if img[x][y] < T1:
+                    R1[x][y] = img[x][y]
+                elif img[x][y] >= T1 and img[x][y] <= T2:
+                    R2[x][y] = img[x][y]
+                elif img[x][y] > T2:
+                    R3[x][y] = img[x][y]
+
+        ### if a pixel in R2 has a neighbor in R1, then assgin that pixel to R1
+        for i in range(R2.shape[0]):
+            for j in range(R2.shape[1]):
+                if self._is_not_boundary(i, j) and R2[i][j] != 0:
+                    if R1[i - 1][j] != 0 and R1[i][j - 1] != 0 and R1[i + 1][j] != 0 and R1[i][j + 1] != 0:
+                        R1[i][j] = R2[i][j]
+                        R2[i][j] = 0
+
+        ### after detection above, remove all pixels in R2 to R3 
+        for x in range(R2.shape[0]):
+            for y in range(R2.shape[1]):
+                if R2[x][y] != 0 :
+                    R3[x][y] = R2[x][y]
+                    R2[x][y] = 0
+
+        ### Convert core region into binary image. According to textbook, we onkly need to threshold this part.
+        for x in range(R1.shape[0]):
+            for y in range(R1.shape[1]):
+                if R1[x][y] != 0:
+                    R1[x][y] = 255
+
+        ### display image. Thresholding value is useless since it has been thresholded when merging it.
+        self._display_image("Dual Thresholding", 0, R1, False)
+                        
+    ### abandon boundary pixels(For dual thresholding)
+    def _is_not_boundary(self, x, y):
+        if x > 0 and y > 0 and x < 511 and y < 511:
+            return True
+        else:
+            return False
+
+### run class here
+result = Assignment3("Data/test1.img")  ### replace path to input other images
+img = result._get_original_image()  ### get oringinal image B
+result._peakiness_detection(img)    ### Part 1
+result._iterative_thresholding(img, True)   ### Part 2
+result._adaptive_thresholding(img)  ### Part 3
+result._dual_thresholding(img)  ### Part 4
 
