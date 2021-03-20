@@ -51,9 +51,6 @@ class Assignment3:
         ### generate histogram
         histogram = np.round(np.transpose(cv.calcHist([img], [0], None, [256], [0,256]))).astype(int)[0].tolist()
 
-        plt.plot(histogram) 
-        plt.show()
-        
         ### store final peakiness
         T = 0
 
@@ -263,7 +260,7 @@ class Assignment3:
                     R3[x][y] = R2[x][y]
                     R2[x][y] = 0
 
-        ### Convert core region into binary image. According to textbook, we onkly need to threshold this part.
+        ### Convert core region into binary image. According to textbook, we only need to threshold this part.
         for x in range(R1.shape[0]):
             for y in range(R1.shape[1]):
                 if R1[x][y] != 0:
