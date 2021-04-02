@@ -266,6 +266,13 @@ class Assignment3:
                 if R1[x][y] != 0:
                     R1[x][y] = 255
 
+        for x in range(R1.shape[0]):
+            for y in range(R1.shape[1]):
+                if R1[x][y] == 0:
+                    R1[x][y] = 255
+                else:
+                    R1[x][y] = 0
+
         ### display image. Thresholding value is useless since it has been thresholded when merging it.
         self._display_image("Dual Thresholding", 0, R1, False)
                         
