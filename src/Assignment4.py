@@ -24,18 +24,30 @@ class Assignment4:
         return img
 
     ### display image 
-    def _display_image(self, img):
-        plt.imshow(img, cmap='gray')
+    def _display_image(self, img, padding):
+
+        for i in range(img.shape[0]):
+            for j in range(img.shape[1]):
+                if img[i][j] != 0 :
+                    img[i][j] = 255
+
+        tar = np.zeros(shape=(512,512))
+
+        for i in range(tar.shape[0]):
+            for j in range(tar.shape[1]):
+                tar[i][j] = img[i + padding][j + padding]
+        plt.imshow(tar, cmap='gray')
         plt.show()
 
     def _construct_filter(self):
-        # define the size of the filter(can be modified)
-        size = int(2 * (np.ceil(3 * self.sigma)) + 1)
+        ### define the size of the filter(4 * sigma)
+        size = int(2 * (np.ceil(4 * self.sigma)) + 1)
 
-        # define the values in the filter(can be modified)
-        x, y = np.meshgrid(np.arange(-size / 2 + 1, size / 2 + 1), np.arange(-size / 2 + 1, size / 2 + 1))
+        ### define the values in the filter(-4 * sigma, 4 * sigma)
+        # x, y = np.meshgrid(np.arange(-size / 2 + 1, size / 2 + 1), np.arange(-size / 2 + 1, size / 2 + 1))
+        x, y = np.meshgrid(np.ceil(np.arange(-size / 2, size / 2)), np.ceil(np.arange(-size / 2, size / 2)))
 
-        # Construct LoG Filter(2D)
+        # Construct LoG filter(2D)
         filter = (((x ** 2 + y ** 2 - (2.0 * self.sigma ** 2)) / self.sigma ** 4) * np.exp(
         -(x ** 2 + y ** 2) / (2.0 * self.sigma ** 2))) / (1 / (2.0 * np.pi * self.sigma ** 2))
 
@@ -48,7 +60,7 @@ class Assignment4:
         filter, filter_size = self._construct_filter()
 
         ### add padding to the input image
-        padding = math.ceil(filter_size/2)
+        padding = math.floor(filter_size/2)
 
         temp_image = np.zeros((img.shape[0] + 2 * padding, img.shape[1] + 2 * padding), dtype=np.uint8)
         
@@ -64,100 +76,102 @@ class Assignment4:
 
         temp_image, filter_size, filter, padding = self._add_padding()
 
-        logarr = np.zeros(temp_image.shape, dtype=float) 
+        temp_zeros = np.zeros(temp_image.shape, dtype=float) 
 
+        aaron = temp_image.shape[0]-(filter_size - 1)
         # apply filter
         for i in range(temp_image.shape[0]-(filter_size - 1)):          
             for j in range(temp_image.shape[1]-(filter_size - 1)):
-                if i + filter_size  < self.w and j + filter_size  < self.h:
+                # if i + filter_size  < self.w and j + filter_size  < self.h:
+                #if i < self.w and j < self.h:
                     window = temp_image[i: i + filter_size, j:j + filter_size] * filter
-                    logarr[i + padding, j + padding] = np.sum(window)
+                    temp_zeros[i + padding, j + padding] = np.sum(window)
 
-        logarr = logarr.astype(np.int64, copy=False)
+        temp_zeros = temp_zeros.astype(np.int64, copy=False)
 
-        zero_crossing = np.zeros(shape = logarr.shape)
+        zero_crossing = np.zeros(temp_zeros.shape)
 
         #find zero crossings
-        for i in range(logarr.shape[0]):
-            for j in range(logarr.shape[1]):
-                if logarr[i][j] == 0:
+        for i in range(temp_zeros.shape[0]):
+            for j in range(temp_zeros.shape[1]):
+                if temp_zeros[i][j] == 0:
                     # to check for vertical or horizontal
-                    if (logarr[i][j - 1] < 0 and logarr[i][j + 1] > 0) or (logarr[i][j - 1] < 0 and logarr[i][j + 1] < 0) or (
-                            logarr[i - 1][j] < 0 and logarr[i + 1][j] > 0) or (logarr[i - 1][j] > 0 and logarr[i + 1][j] < 0):
+                    if (temp_zeros[i][j - 1] < 0 and temp_zeros[i][j + 1] > 0) or (temp_zeros[i][j - 1] < 0 and temp_zeros[i][j + 1] < 0) or (
+                            temp_zeros[i - 1][j] < 0 and temp_zeros[i + 1][j] > 0) or (temp_zeros[i - 1][j] > 0 and temp_zeros[i + 1][j] < 0):
                         zero_crossing[i][j] = 255
-                if logarr[i][j] < 0:
-                    if (logarr[i][j - 1] > 0) or (logarr[i][j + 1] > 0) or (logarr[i - 1][j] > 0) or (logarr[i + 1][j] > 0):
+                if temp_zeros[i][j] < 0:
+                    if (temp_zeros[i][j - 1] > 0) or (temp_zeros[i][j + 1] > 0) or (temp_zeros[i - 1][j] > 0) or (temp_zeros[i + 1][j] > 0):
                         zero_crossing[i][j] = 255
 
-        return zero_crossing, padding, temp_image, filter_size, filter,logarr
+        return zero_crossing, padding, temp_image, filter_size, filter,temp_zeros
 
     def _get_zero_crossing(self):
-        zero_crossing, padding, temp_image, filter_size_4_5, LOGfilter4_5, logArr4_5 = self._run_filter()
-        for i in range(zero_crossing.shape[0]):
-            for j in range(zero_crossing.shape[1]):
-                if zero_crossing[i][j] == 255 and (i + filter_size_4_5) < zero_crossing.shape[0] and (j + filter_size_4_5) \
-                        < zero_crossing.shape[1] and (i + padding) < zero_crossing.shape[0] and (j + padding) < zero_crossing.shape[1]:
-                    # convolve around the same pixel in the original image and its 8-neighbors
-                    window = temp_image[i: i + filter_size_4_5, j:j + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i + padding, j + padding] = np.sum(window)
-                    # 8-neighbors
+        zero_crossing, padding, temp_image, filter_size, filter, temp_zeros = self._run_filter()
+        # for i in range(zero_crossing.shape[0]):
+        #     for j in range(zero_crossing.shape[1]):
+        #         if zero_crossing[i][j] == 255 and (i + filter_size) < zero_crossing.shape[0] and (j + filter_size) \
+        #                 < zero_crossing.shape[1] and (i + padding) < zero_crossing.shape[0] and (j + padding) < zero_crossing.shape[1]:
+        #             # convolve around the same pixel in the original image and its 8-neighbors
+        #             window = temp_image[i: i + filter_size, j:j + filter_size] * filter
+        #             temp_zeros[i + padding, j + padding] = np.sum(window)
+        #             # 8-neighbors
 
-                    # i-1 ; j-1
-                    window = temp_image[i-1: i-1 + filter_size_4_5, j-1:j-1 + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i-1 + padding, j-1 + padding] = np.sum(window)
+        #             # i-1 ; j-1
+        #             window = temp_image[i-1: i-1 + filter_size, j-1:j-1 + filter_size] * filter
+        #             temp_zeros[i-1 + padding, j-1 + padding] = np.sum(window)
 
-                    # i-1 ; j
-                    window = temp_image[i - 1: i - 1 + filter_size_4_5, j:j + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i - 1 + padding, j + padding] = np.sum(window)
+        #             # i-1 ; j
+        #             window = temp_image[i - 1: i - 1 + filter_size, j:j + filter_size] * filter
+        #             temp_zeros[i - 1 + padding, j + padding] = np.sum(window)
 
-                    # i-1 ; j+1
-                    window = temp_image[i - 1: i - 1 + filter_size_4_5, j + 1:j + 1 + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i - 1 + padding, j + 1 + padding] = np.sum(window)
+        #             # i-1 ; j+1
+        #             window = temp_image[i - 1: i - 1 + filter_size, j + 1:j + 1 + filter_size] * filter
+        #             temp_zeros[i - 1 + padding, j + 1 + padding] = np.sum(window)
 
-                    # i ; j-1
-                    window = temp_image[i : i + filter_size_4_5, j - 1:j - 1 + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i + padding, j - 1 + padding] = np.sum(window)
+        #             # i ; j-1
+        #             window = temp_image[i : i + filter_size, j - 1:j - 1 + filter_size] * filter
+        #             temp_zeros[i + padding, j - 1 + padding] = np.sum(window)
 
-                    # i-1 ; j+1
-                    window = temp_image[i - 1: i - 1 + filter_size_4_5, j + 1:j + 1 + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i - 1 + padding, j + 1 + padding] = np.sum(window)
+        #             # i-1 ; j+1
+        #             window = temp_image[i - 1: i - 1 + filter_size, j + 1:j + 1 + filter_size] * filter
+        #             temp_zeros[i - 1 + padding, j + 1 + padding] = np.sum(window)
 
-                    # i+1 ; j-1
-                    window = temp_image[i + 1: i + 1 + filter_size_4_5, j - 1:j - 1 + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i + 1 + padding, j - 1 + padding] = np.sum(window)
+        #             # i+1 ; j-1
+        #             window = temp_image[i + 1: i + 1 + filter_size, j - 1:j - 1 + filter_size] * filter
+        #             temp_zeros[i + 1 + padding, j - 1 + padding] = np.sum(window)
 
-                    # i+1 ; j
-                    window = temp_image[i + 1: i + 1 + filter_size_4_5, j:j + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i + 1 + padding, j + padding] = np.sum(window)
+        #             # i+1 ; j
+        #             window = temp_image[i + 1: i + 1 + filter_size, j:j + filter_size] * filter
+        #             temp_zeros[i + 1 + padding, j + padding] = np.sum(window)
 
-                    # i+1 ; j+1
-                    window = temp_image[i + 1: i + 1 + filter_size_4_5, j + 1:j + 1 + filter_size_4_5] * LOGfilter4_5
-                    logArr4_5[i + 1 + padding, j + 1 + padding] = np.sum(window)
+        #             # i+1 ; j+1
+        #             window = temp_image[i + 1: i + 1 + filter_size, j + 1:j + 1 + filter_size] * filter
+        #             temp_zeros[i + 1 + padding, j + 1 + padding] = np.sum(window)
 
-        logArr4_5 = logArr4_5.astype(np.int64, copy=False)
+        # temp_zeros = temp_zeros.astype(np.int64, copy=False)
 
-        zero_crossing_4_5 = np.zeros_like(logArr4_5)
+        # target = np.zeros_like(temp_zeros)
 
-        #find zero crossings
-        for i in range(logArr4_5.shape[0]):# - (filter_size - 1)):
-            for j in range(logArr4_5.shape[1]):#- (filter_size - 1)):
-                if logArr4_5[i][j] == 0:
-                    # to check for vertical or horizontal
-                    if (logArr4_5[i][j - 1] < 0 and logArr4_5[i][j + 1] > 0) or (logArr4_5[i][j - 1] < 0 and logArr4_5[i][j + 1] < 0) or (
-                        logArr4_5[i - 1][j] < 0 and logArr4_5[i + 1][j] > 0) or (logArr4_5[i - 1][j] > 0 and logArr4_5[i + 1][j] < 0):
-                        zero_crossing_4_5[i][j] = 255
-                if logArr4_5[i][j] < 0:
-                    if (logArr4_5[i][j - 1] > 0) or (logArr4_5[i][j + 1] > 0) or (logArr4_5[i - 1][j] > 0) or (logArr4_5[i + 1][j] > 0):
-                        zero_crossing_4_5[i][j] = 255
+        # #find zero crossings
+        # for i in range(temp_zeros.shape[0]):# - (filter_size - 1)):
+        #     for j in range(temp_zeros.shape[1]):#- (filter_size - 1)):
+        #         if temp_zeros[i][j] == 0:
+        #             # to check for vertical or horizontal
+        #             if (temp_zeros[i][j - 1] < 0 and temp_zeros[i][j + 1] > 0) or (temp_zeros[i][j - 1] < 0 and temp_zeros[i][j + 1] < 0) or (
+        #                 temp_zeros[i - 1][j] < 0 and temp_zeros[i + 1][j] > 0) or (temp_zeros[i - 1][j] > 0 and temp_zeros[i + 1][j] < 0):
+        #                 target[i][j] = 255
+        #         if temp_zeros[i][j] < 0:
+        #             if (temp_zeros[i][j - 1] > 0) or (temp_zeros[i][j + 1] > 0) or (temp_zeros[i - 1][j] > 0) or (temp_zeros[i + 1][j] > 0):
+        #                 target[i][j] = 255
 
-        return zero_crossing_4_5
+        return target, padding
 
     
 ### run class here
 result = Assignment4("Data/test3.img")  ### replace path to input other images
 img = result._get_original_image()  ### get oringinal image B
 result._run_filter()
-target = result._get_zero_crossing()
-result._display_image(target)
+target, padding = result._get_zero_crossing()
+result._display_image(target, padding)
 
 
